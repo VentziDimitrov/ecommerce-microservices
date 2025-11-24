@@ -1,0 +1,38 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch VoiceAgentApi",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/VoiceAgentApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "LD_LIBRARY_PATH": "${workspaceFolder}/bin/Debug/net8.0/runtimes/linux-x64/native"
+            },
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "name": "Launch VoiceAgentApi (HTTPS)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/VoiceAgentApi.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "https://localhost:5001;http://localhost:5000",
+                "LD_LIBRARY_PATH": "${workspaceFolder}/bin/Debug/net8.0/runtimes/linux-x64/native"
+            },
+            "console": "internalConsole",
+            "internalConsoleOptions": "openOnSessionStart"
+        }
+    ]
+}

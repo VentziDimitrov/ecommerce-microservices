@@ -1,0 +1,5 @@
+/voice-agent-ui/node_modules
+/VoiceAgentApi/bin
+/VoiceAgentApi/obj
+/VoiceAgentApi/appsettings.Development.json
+/VoiceAgentApi/appsettings.json
