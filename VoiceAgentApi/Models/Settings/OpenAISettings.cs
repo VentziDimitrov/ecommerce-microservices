@@ -1,3 +1,5 @@
+namespace VoiceAgentApi.Models.Settings;
+
 public class OpenAISettings
 {
     public const string SectionName = "OpenAI";

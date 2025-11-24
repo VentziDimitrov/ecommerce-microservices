@@ -1,3 +1,5 @@
+namespace VoiceAgentApi.Models.DTOs;
+
 /// <summary>
 /// Represents a document retrieved from vector search
 /// </summary>

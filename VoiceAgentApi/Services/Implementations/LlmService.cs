@@ -1,130 +1,26 @@
 using System.Text;
-using System.Text.Json;
 using OpenAI;
 using OpenAI.Chat;
+using VoiceAgentApi.Models.DTOs;
+using VoiceAgentApi.Services.Interfaces;
 
-public class ConversationService
-{
-    private readonly RetrievalService _retrievalService;
-    private readonly LlmService _llmService;
-    private readonly SessionHistory _history;
+namespace VoiceAgentApi.Services.Implementations;
 
-    public ConversationService(IConfiguration configuration)
-    {
-        _retrievalService = new RetrievalService(configuration);
-        _llmService = new LlmService(configuration);
-        _history = new SessionHistory();
-    }
-
-    public async Task<string> ProcessUserTextAsync(string userText)
-    {
-        _history.AddUserUtterance(userText);
-
-        // Retrieve relevant context from knowledge base
-        var chunks = await _retrievalService.QueryAsync(userText);
-
-        // Generate response using LLM
-        var answer = await _llmService.GenerateAnswerAsync(_history, chunks, userText);
-
-        _history.AddAgentResponse(answer);
-        return answer;
-    }
-
-    public async Task<string> CorrectUserTextAsync(string userText)
-    {
-        var correctedText = await _llmService.CorrectQuestion(userText, _history);
-        return correctedText;
-    }
-}
-
-public class SessionHistory
-{
-    private readonly List<Message> _messages = new();
-
-    public void AddUserUtterance(string text)
-    {
-        _messages.Add(new Message { Role = "user", Content = text });
-    }
-
-    public void AddAgentResponse(string text)
-    {
-        _messages.Add(new Message { Role = "assistant", Content = text });
-    }
-
-    public List<Message> GetMessages() => _messages;
-
-    public string GetFormattedHistory(int maxMessages = 10)
-    {
-        var recentMessages = _messages.TakeLast(maxMessages);
-        var sb = new StringBuilder();
-        foreach (var msg in recentMessages)
-        {
-            sb.AppendLine($"{msg.Role}: {msg.Content}");
-        }
-        return sb.ToString();
-    }
-}
-
-public class Message
-{
-    public string Role { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-}
-
-public class RetrievalService
-{
-    private readonly IConfiguration _configuration;
-    private readonly HttpClient _httpClient;
-
-    public RetrievalService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-        _httpClient = new HttpClient();
-
-        var pineconeApiKey = _configuration["Pinecone:ApiKey"];
-        if (!string.IsNullOrEmpty(pineconeApiKey) && pineconeApiKey != "YOUR_API_KEY")
-        {
-            _httpClient.DefaultRequestHeaders.Add("Api-Key", pineconeApiKey);
-        }
-    }
-
-    public Task<List<string>> QueryAsync(string query)
-    {
-        // Placeholder implementation
-        // In a real implementation, you would:
-        // 1. Convert query to embeddings using Azure OpenAI or similar
-        // 2. Query Pinecone vector database
-        // 3. Return relevant chunks
-
-        var pineconeApiKey = _configuration["Pinecone:ApiKey"];
-        if (string.IsNullOrEmpty(pineconeApiKey) || pineconeApiKey == "YOUR_API_KEY")
-        {
-            Console.WriteLine("Pinecone not configured, returning empty context");
-            return Task.FromResult(new List<string>());
-        }
-
-        try
-        {
-            // TODO: Implement actual Pinecone query
-            // For now, return empty list
-            return Task.FromResult(new List<string>());
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error querying knowledge base: {ex.Message}");
-            return Task.FromResult(new List<string>());
-        }
-    }
-}
-
-public class LlmService
+/// <summary>
+/// Service for Large Language Model operations
+/// </summary>
+public class LlmService : ILlmService
 {
     private readonly IConfiguration _configuration;
     private readonly OpenAIClient _client;
+    private readonly ILogger<LlmService> _logger;
 
-    public LlmService(IConfiguration configuration)
+    public LlmService(
+        IConfiguration configuration,
+        ILogger<LlmService> logger)
     {
         _configuration = configuration;
+        _logger = logger;
         string apiKey = configuration["OpenAI:ApiKey"] ?? throw new ArgumentNullException("OpenAI:ApiKey");
         _client = new OpenAIClient(apiKey);
     }
@@ -135,14 +31,14 @@ public class LlmService
         var chatClient = _client.GetChatClient("gpt-4o-mini");
         ChatCompletionOptions options = new ChatCompletionOptions
         {
-            Temperature = 0.2f, 
+            Temperature = 0.2f,
             MaxOutputTokenCount = 500,
-            TopP = 1.0f,           
+            TopP = 1.0f,
         };
 
         var result = await chatClient.CompleteChatAsync([new SystemChatMessage(prompt)], options);
 
-        Console.WriteLine("OpenAI response: " + result.Value.Content[0].Text);
+        _logger.LogInformation("OpenAI response: {Response}", result.Value.Content[0].Text);
         if (result.Value.Content[0].Text != null)
         {
             return result.Value.Content[0].Text;
@@ -150,10 +46,10 @@ public class LlmService
         return question;
     }
 
-    public async Task<string> GenerateAnswerAsync(SessionHistory history, List<string> contextChunks, string userQuery)
+    public async Task<string> GenerateAnswerAsync(SessionHistory history, List<RetrievedDocument> contextChunks, string userQuery)
     {
         var llmEndpoint = _configuration["LLM:Endpoint"];
-        if (string.IsNullOrEmpty(llmEndpoint) || llmEndpoint == "YOUR_LLM_ENDPOINT")
+        if (string.IsNullOrEmpty(llmEndpoint))
         {
             // Fallback to simple echo response
             return $"I understand you said: '{userQuery}'.";
@@ -162,7 +58,8 @@ public class LlmService
         try
         {
             // Build prompt with context and history
-             /*var prompt = BuildPrompt(history, contextChunks, userQuery);
+            // Commented out pending full implementation
+            /*var prompt = BuildPrompt(history, contextChunks, userQuery);
 
             // Call LLM API (example for Azure OpenAI)
             var requestBody = new
@@ -203,7 +100,7 @@ public class LlmService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error calling LLM: {ex.Message}");
+            _logger.LogError(ex, "Error calling LLM");
             return $"I understand your question about '{userQuery}', but I'm having trouble generating a response right now.";
         }
 

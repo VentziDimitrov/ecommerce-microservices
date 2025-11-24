@@ -1,3 +1,5 @@
+namespace VoiceAgentApi.Models.Settings;
+
 /// <summary>
 /// Configuration settings for Pinecone vector database
 /// </summary>

@@ -1,19 +1,11 @@
 using Pinecone;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using OpenAI.Embeddings;
-using System.Numerics;
+using VoiceAgentApi.Models.DTOs;
+using VoiceAgentApi.Models.Settings;
+using VoiceAgentApi.Services.Interfaces;
 
-namespace backend.Services;
-
-public interface IVectorDatabaseService
-{
-    Task<List<RetrievedDocument>> SearchAsync(ReadOnlyMemory<float> vector, uint topK);
-    Task StoreDocumentAsync(string documentId, string content, Embedding<float> embedding, Dictionary<string, object> metadata);
-    Task<bool> DeleteDocumentAsync(string documentId);
-    Task CreateIndexIfNotExists(string indexName);  
-    Microsoft.Extensions.AI.EmbeddingGenerationOptions GetEmbeddingOptions();  
-}
+namespace VoiceAgentApi.Services.Implementations;
 
 /// <summary>
 /// Vector database service using Pinecone
@@ -23,16 +15,34 @@ public class VectorDatabaseService : IVectorDatabaseService
     private readonly ILogger<VectorDatabaseService> _logger;
     private readonly PineconeClient _pineconeClient;
     private readonly PineconeSettings _settings;
+    private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
 
     public VectorDatabaseService(
         ILogger<VectorDatabaseService> logger,
-        IOptions<PineconeSettings> pineconeSettings)
+        IOptions<PineconeSettings> pineconeSettings,
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
     {
         _logger = logger;
         _settings = pineconeSettings.Value;
+        _embeddingGenerator = embeddingGenerator;
 
         _pineconeClient = new PineconeClient(_settings.ApiKey);
         _logger.LogInformation("Initialized Pinecone client for region {Region}", _settings.Region);
+    }
+
+    public async Task<Embedding<float>> GenerateEmbeddingAsync(string text)
+    {
+        try
+        {
+            _logger.LogDebug("Generating embedding for text of length: {Length}", text.Length);
+            var embeddingResult = await _embeddingGenerator.GenerateAsync(text);
+            return embeddingResult;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating embedding");
+            throw;
+        }
     }
 
     public async Task<List<RetrievedDocument>> SearchAsync(ReadOnlyMemory<float> vector, uint topK)
@@ -104,7 +114,7 @@ public class VectorDatabaseService : IVectorDatabaseService
             };
             await index.UpsertAsync(new UpsertRequest { Vectors = new List<Pinecone.Vector> { vector }});
 
-            _logger.LogInformation("Document {DocumentId} stored in Pinecone", documentId);     
+            _logger.LogInformation("Document {DocumentId} stored in Pinecone", documentId);
         }
         catch (Exception ex)
         {
@@ -200,6 +210,4 @@ public class VectorDatabaseService : IVectorDatabaseService
             _ => value?.ToString() ?? string.Empty
         };
     }
-
-    
 }

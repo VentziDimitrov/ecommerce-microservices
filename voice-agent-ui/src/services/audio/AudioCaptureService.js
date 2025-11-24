@@ -28,7 +28,7 @@ class AudioCaptureService {
           autoGainControl: true,
           sampleRate: AUDIO_CONFIG.SAMPLE_RATE,
           channelCount: AUDIO_CONFIG.CHANNELS,
-        },
+        }
       });
 
       // Create AudioContext
