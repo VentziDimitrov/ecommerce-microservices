@@ -13,6 +13,9 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "copy-worklet": "node scripts/copy-worklet.js",
+    "prestart": "npm run copy-worklet",
+    "prebuild": "npm run copy-worklet",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

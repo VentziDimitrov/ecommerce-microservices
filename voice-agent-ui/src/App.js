@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import VoiceSession from './components/VoiceSession';
-import VoiceSession2 from './components/VoiceSession2';
 import './App.css';
 
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -31,7 +30,7 @@ function App() {
             </p>
           </div>
         ) : (
-          <VoiceSession2
+          <VoiceSession
             backendWsUrl={backendWsUrl}
             onSessionEnd={() => setSessionActive(false)}
           />

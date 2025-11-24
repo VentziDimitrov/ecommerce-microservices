@@ -187,6 +187,10 @@ public class VoiceSessionHandler
         try
         {
             Console.WriteLine($"Processing user text: {userText}");
+
+            // Send recognized text to frontend for display
+            await SendTranscriptAsync(userText, "user");
+
             var correctedText = await _conversationService.CorrectUserTextAsync(userText);
             Console.WriteLine($"Corrected user text: {correctedText}");
 
@@ -197,6 +201,9 @@ public class VoiceSessionHandler
 
             // Get response from conversation service
             string answer = await _conversationService.ProcessUserTextAsync(correctedText);
+
+            // Send AI response text to frontend for display
+            await SendTranscriptAsync(answer, "assistant");
 
             // Send status update to client
             await SendStatusAsync("speaking");
@@ -265,6 +272,29 @@ public class VoiceSessionHandler
         {
             Console.WriteLine($"Error in TTS: {ex.Message}");
             await SendErrorAsync($"TTS error: {ex.Message}");
+        }
+    }
+
+    private async Task SendTranscriptAsync(string text, string role)
+    {
+        try
+        {
+            var message = JsonSerializer.Serialize(new { type = "transcript", text, role });
+            var bytes = Encoding.UTF8.GetBytes(message);
+            if (_socket.State == WebSocketState.Open)
+            {
+                await _socket.SendAsync(
+                    new ArraySegment<byte>(bytes),
+                    WebSocketMessageType.Text,
+                    true,
+                    CancellationToken.None
+                );
+                Console.WriteLine($"[WebSocket] Sent transcript ({role}): {text}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error sending transcript: {ex.Message}");
         }
     }
 
