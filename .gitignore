@@ -1,4 +1,10 @@
+# Frontend
 /voice-agent-ui/node_modules
+/voice-agent-ui/build
+/voice-agent-ui/.env
+/voice-agent-ui/.env.local
+
+# Backend
 /VoiceAgentApi/bin
 /VoiceAgentApi/obj
 /VoiceAgentApi/appsettings.Development.json
