@@ -1,0 +1,54 @@
+version: '3.8'
+
+# Production override for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  backend:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      # Production CORS settings - update with your actual domain
+      - Cors__AllowedOrigins__0=https://yourdomain.com
+      - Cors__AllowedOrigins__1=https://www.yourdomain.com
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    environment:
+      # Production API URL - update with your actual backend URL
+      - REACT_APP_API_URL=https://api.yourdomain.com
+      - REACT_APP_WS_URL=wss://api.yourdomain.com/voice/ws
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"

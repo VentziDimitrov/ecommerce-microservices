@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    container_name: voice-agent-api
+    build:
+      context: ./VoiceAgentApi
+      dockerfile: Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      # Cors Configuration
+      - Cors__AllowedOrigins__0=http://localhost
+      - Cors__AllowedOrigins__1=http://localhost:3000
+      - Cors__AllowedOrigins__2=http://frontend
+      # Azure Speech Service (provide via .env file)
+      - AzureSpeech__Key=${AZURE_SPEECH_KEY}
+      - AzureSpeech__Region=${AZURE_SPEECH_REGION:-germanywestcentral}
+      # OpenAI Configuration
+      - OpenAI__ApiKey=${OPENAI_API_KEY}
+      - OpenAI__ChatModel=${OPENAI_CHAT_MODEL:-gpt-4}
+      - OpenAI__EmbeddingModel=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - OpenAI__Temperature=${OPENAI_TEMPERATURE:-0.2}
+      - OpenAI__MaxTokens=${OPENAI_MAX_TOKENS:-500}
+      - OpenAI__TopP=${OPENAI_TOP_P:-1.0}
+      # Pinecone Configuration
+      - Pinecone__ApiKey=${PINECONE_API_KEY}
+      - Pinecone__Region=${PINECONE_REGION:-us-east-1}
+      - Pinecone__Model=${PINECONE_MODEL:-text-embedding-3-small}
+      - Pinecone__Dimension=${PINECONE_DIMENSION:-1536}
+      - Pinecone__Namespace=${PINECONE_NAMESPACE:-__default__}
+      - Pinecone__IndexName=${PINECONE_INDEX_NAME:-bulgariaair}
+      # Serilog Configuration
+      - Serilog__MinimumLevel__Default=Information
+      - Serilog__MinimumLevel__Override__Microsoft=Warning
+      - Serilog__MinimumLevel__Override__System=Warning
+    volumes:
+      - ./VoiceAgentApi/logs:/app/logs
+      - ./VoiceAgentApi/Data:/app/Data:ro
+    networks:
+      - voice-agent-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend UI Service
+  frontend:
+    container_name: voice-agent-ui
+    build:
+      context: ./voice-agent-ui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+      - REACT_APP_WS_URL=ws://localhost:5000/voice/ws
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - voice-agent-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  voice-agent-network:
+    driver: bridge
+    name: voice-agent-network
+
+volumes:
+  backend-logs:
+    name: voice-agent-logs

@@ -30,7 +30,7 @@ public class ConversationService : IConversationService
         var vector = await _vectorDatabaseService.GenerateEmbeddingAsync(userText);
 
         // Retrieve relevant context from knowledge base
-        var chunks = await _vectorDatabaseService.SearchAsync(vector.Vector, 5);
+        var chunks = await _vectorDatabaseService.SearchAsync(vector.Vector, 3);
 
         // Generate response using LLM
         var answer = await _llmService.GenerateAnswerAsync(_history, chunks, userText);
